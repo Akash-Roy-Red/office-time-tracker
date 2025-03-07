@@ -32,20 +32,29 @@
         margin-top: 10px;
         font-size: 1.2em;
       }
-      .small-progress-bar {
-        width: 100%; /* 100% size of the weekly bar */
-        margin: 10px auto;
-      }
       .footer {
         margin-top: 30px;
         font-size: 1em;
         color: #555;
+      }
+      .settings {
+        margin-bottom: 20px;
       }
     </style>
   </head>
   <body>
     <h1>Office Time Tracker</h1>
     <p id="currentDateTime"></p>
+
+    <div class="settings">
+      <h3>Set Office Hours</h3>
+      <label>Start Time: <input type="time" id="startTime" /></label>
+      <label>End Time: <input type="time" id="endTime" /></label>
+      <h3>Set Recess Time</h3>
+      <label>Start Time: <input type="time" id="recessStart" /></label>
+      <label>End Time: <input type="time" id="recessEnd" /></label>
+      <button onclick="saveSettings()">Save Settings</button>
+    </div>
 
     <div class="progress-container">
       <h3>Weekly Progress</h3>
@@ -56,7 +65,7 @@
       <p class="info" id="timeLeft">Time left this week: Calculating...</p>
     </div>
 
-    <div class="progress-container small-progress-bar">
+    <div class="progress-container">
       <h3>Today's Progress</h3>
       <div class="progress-bar">
         <div class="progress-bar-inner" id="dailyProgressBar"></div>
@@ -70,41 +79,52 @@
 
     <script>
       function updateDateTime() {
-        const now = new Date();
-        document.getElementById("currentDateTime").textContent =
-          now.toLocaleString();
+        document.getElementById("currentDateTime").textContent = new Date().toLocaleString();
+      }
+
+      function saveSettings() {
+        localStorage.setItem("startTime", document.getElementById("startTime").value);
+        localStorage.setItem("endTime", document.getElementById("endTime").value);
+        localStorage.setItem("recessStart", document.getElementById("recessStart").value);
+        localStorage.setItem("recessEnd", document.getElementById("recessEnd").value);
+        calculateProgress();
+      }
+
+      function loadSettings() {
+        document.getElementById("startTime").value = localStorage.getItem("startTime") || "08:30";
+        document.getElementById("endTime").value = localStorage.getItem("endTime") || "17:30";
+        document.getElementById("recessStart").value = localStorage.getItem("recessStart") || "13:00";
+        document.getElementById("recessEnd").value = localStorage.getItem("recessEnd") || "14:00";
       }
 
       function calculateProgress() {
-        const startHour = 8.5; // 8:30 AM
-        const endHour = 17.5; // 5:30 PM
-        const lunchStart = 13; // 1:00 PM
-        const lunchEnd = 14; // 2:00 PM
-        const hoursPerDay = endHour - startHour - 1; // 8 effective hours per day
-        const daysPerWeek = 5; // Monday-Friday
+        const startHour = parseFloat(localStorage.getItem("startTime")?.replace(":", ".") || 8.5);
+        const endHour = parseFloat(localStorage.getItem("endTime")?.replace(":", ".") || 17.5);
+        const recessStart = parseFloat(localStorage.getItem("recessStart")?.replace(":", ".") || 13);
+        const recessEnd = parseFloat(localStorage.getItem("recessEnd")?.replace(":", ".") || 14);
+        const hoursPerDay = endHour - startHour - (recessEnd - recessStart);
+        const daysPerWeek = 5;
         const totalWeekHours = hoursPerDay * daysPerWeek;
 
         const now = new Date();
-        const day = now.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+        const day = now.getDay();
         const currentHour = now.getHours() + now.getMinutes() / 60;
 
         let hoursWorkedThisWeek = 0;
         let hoursWorkedToday = 0;
 
         if (day >= 1 && day <= 5) {
-          // Monday to Friday
           for (let d = 1; d <= day; d++) {
             if (d < day) {
               hoursWorkedThisWeek += hoursPerDay;
-            } else if (d === day) {
+            } else {
               if (currentHour >= startHour && currentHour <= endHour) {
-                if (currentHour > lunchStart && currentHour < lunchEnd) {
-                  hoursWorkedToday += lunchStart - startHour; // Morning session
-                } else if (currentHour <= lunchStart) {
+                if (currentHour > recessStart && currentHour < recessEnd) {
+                  hoursWorkedToday += recessStart - startHour;
+                } else if (currentHour <= recessStart) {
                   hoursWorkedToday += currentHour - startHour;
                 } else {
-                  hoursWorkedToday +=
-                    lunchStart - startHour + (currentHour - lunchEnd);
+                  hoursWorkedToday += recessStart - startHour + (currentHour - recessEnd);
                 }
               } else if (currentHour > endHour) {
                 hoursWorkedToday += hoursPerDay;
@@ -118,34 +138,19 @@
         const dailyPercentage = (hoursWorkedToday / hoursPerDay) * 100;
         const timeLeft = totalWeekHours - hoursWorkedThisWeek;
 
-        document.getElementById(
-          "weeklyProgressBar"
-        ).style.width = `${weeklyPercentage}%`;
-        document.getElementById(
-          "weeklyProgressInfo"
-        ).textContent = `${weeklyPercentage.toFixed(
-          2
-        )}% of office time spent this week.`;
-
-        document.getElementById(
-          "dailyProgressBar"
-        ).style.width = `${dailyPercentage}%`;
-        document.getElementById(
-          "dailyProgressInfo"
-        ).textContent = `${dailyPercentage.toFixed(
-          2
-        )}% of today's office time spent.`;
-
-        document.getElementById(
-          "timeLeft"
-        ).textContent = `Time left this week: ${timeLeft.toFixed(2)} hours.`;
+        document.getElementById("weeklyProgressBar").style.width = `${weeklyPercentage}%`;
+        document.getElementById("weeklyProgressInfo").textContent = `${weeklyPercentage.toFixed(2)}% of office time spent this week.`;
+        document.getElementById("dailyProgressBar").style.width = `${dailyPercentage}%`;
+        document.getElementById("dailyProgressInfo").textContent = `${dailyPercentage.toFixed(2)}% of today's office time spent.`;
+        document.getElementById("timeLeft").textContent = `Time left this week: ${timeLeft.toFixed(2)} hours.`;
       }
 
       setInterval(() => {
         updateDateTime();
         calculateProgress();
-      }, 1000); // Update every second
+      }, 1000);
 
+      loadSettings();
       updateDateTime();
       calculateProgress();
     </script>
