@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Office Time Tracker</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 50px;
+      }
+      .progress-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 20px auto;
+      }
+      .progress-bar {
+        width: 100%;
+        background: #e0e0e0;
+        border-radius: 25px;
+        overflow: hidden;
+        height: 30px;
+      }
+      .progress-bar-inner {
+        height: 100%;
+        background: #4caf50;
+        width: 0%;
+        transition: width 0.5s ease;
+      }
+      .info {
+        margin-top: 10px;
+        font-size: 1.2em;
+      }
+      .small-progress-bar {
+        width: 100%; /* 100% size of the weekly bar */
+        margin: 10px auto;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 1em;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Office Time Tracker</h1>
+    <p id="currentDateTime"></p>
+
+    <div class="progress-container">
+      <h3>Weekly Progress</h3>
+      <div class="progress-bar">
+        <div class="progress-bar-inner" id="weeklyProgressBar"></div>
+      </div>
+      <p class="info" id="weeklyProgressInfo">Calculating...</p>
+      <p class="info" id="timeLeft">Time left this week: Calculating...</p>
+    </div>
+
+    <div class="progress-container small-progress-bar">
+      <h3>Today's Progress</h3>
+      <div class="progress-bar">
+        <div class="progress-bar-inner" id="dailyProgressBar"></div>
+      </div>
+      <p class="info" id="dailyProgressInfo">Calculating...</p>
+    </div>
+
+    <div class="footer">
+      <p>Developed by Roy</p>
+    </div>
+
+    <script>
+      function updateDateTime() {
+        const now = new Date();
+        document.getElementById("currentDateTime").textContent =
+          now.toLocaleString();
+      }
+
+      function calculateProgress() {
+        const startHour = 8.5; // 8:30 AM
+        const endHour = 17.5; // 5:30 PM
+        const lunchStart = 13; // 1:00 PM
+        const lunchEnd = 14; // 2:00 PM
+        const hoursPerDay = endHour - startHour - 1; // 8 effective hours per day
+        const daysPerWeek = 5; // Monday-Friday
+        const totalWeekHours = hoursPerDay * daysPerWeek;
+
+        const now = new Date();
+        const day = now.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+        const currentHour = now.getHours() + now.getMinutes() / 60;
+
+        let hoursWorkedThisWeek = 0;
+        let hoursWorkedToday = 0;
+
+        if (day >= 1 && day <= 5) {
+          // Monday to Friday
+          for (let d = 1; d <= day; d++) {
+            if (d < day) {
+              hoursWorkedThisWeek += hoursPerDay;
+            } else if (d === day) {
+              if (currentHour >= startHour && currentHour <= endHour) {
+                if (currentHour > lunchStart && currentHour < lunchEnd) {
+                  hoursWorkedToday += lunchStart - startHour; // Morning session
+                } else if (currentHour <= lunchStart) {
+                  hoursWorkedToday += currentHour - startHour;
+                } else {
+                  hoursWorkedToday +=
+                    lunchStart - startHour + (currentHour - lunchEnd);
+                }
+              } else if (currentHour > endHour) {
+                hoursWorkedToday += hoursPerDay;
+              }
+              hoursWorkedThisWeek += hoursWorkedToday;
+            }
+          }
+        }
+
+        const weeklyPercentage = (hoursWorkedThisWeek / totalWeekHours) * 100;
+        const dailyPercentage = (hoursWorkedToday / hoursPerDay) * 100;
+        const timeLeft = totalWeekHours - hoursWorkedThisWeek;
+
+        document.getElementById(
+          "weeklyProgressBar"
+        ).style.width = `${weeklyPercentage}%`;
+        document.getElementById(
+          "weeklyProgressInfo"
+        ).textContent = `${weeklyPercentage.toFixed(
+          2
+        )}% of office time spent this week.`;
+
+        document.getElementById(
+          "dailyProgressBar"
+        ).style.width = `${dailyPercentage}%`;
+        document.getElementById(
+          "dailyProgressInfo"
+        ).textContent = `${dailyPercentage.toFixed(
+          2
+        )}% of today's office time spent.`;
+
+        document.getElementById(
+          "timeLeft"
+        ).textContent = `Time left this week: ${timeLeft.toFixed(2)} hours.`;
+      }
+
+      setInterval(() => {
+        updateDateTime();
+        calculateProgress();
+      }, 1000); // Update every second
+
+      updateDateTime();
+      calculateProgress();
+    </script>
+  </body>
+</html>
